@@ -1,0 +1,271 @@
+package com.forum.service;
+
+import com.forum.dto.PostRequest;
+import com.forum.dto.PostResponse;
+import com.forum.model.*;
+import com.forum.repository.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class PostService {
+
+    private final PostRepository postRepository;
+    private final CategoryRepository categoryRepository;
+    private final CommentRepository commentRepository;
+    private final VoteRepository voteRepository;
+    private final SavedPostRepository savedPostRepository;
+
+    public Page<PostResponse> getAllPosts(int page, int size, String sort, User currentUser) {
+        Pageable pageable = createPageable(page, size, sort);
+        return mapPageToResponse(postRepository.findAll(pageable), currentUser);
+    }
+
+    public Page<PostResponse> getPostsByCategory(Long categoryId, int page, int size, User currentUser) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return mapPageToResponse(postRepository.findByCategoryCategoryId(categoryId, pageable), currentUser);
+    }
+
+    public Page<PostResponse> getPostsByUser(UUID userId, int page, int size, User currentUser) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return mapPageToResponse(postRepository.findByAuthorUserId(userId, pageable), currentUser);
+    }
+
+    public Page<PostResponse> searchPosts(String query, int page, int size, User currentUser) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return mapPageToResponse(postRepository.searchPosts(query, pageable), currentUser);
+    }
+
+    public Page<PostResponse> getTrendingPosts(int page, int size, User currentUser) {
+        Pageable pageable = PageRequest.of(page, size);
+        return mapPageToResponse(postRepository.findTrending(pageable), currentUser);
+    }
+
+    public Page<PostResponse> getUnansweredPosts(int page, int size, User currentUser) {
+        Pageable pageable = PageRequest.of(page, size);
+        return mapPageToResponse(postRepository.findUnanswered(pageable), currentUser);
+    }
+
+    @Transactional
+    public PostResponse getPostById(UUID postId, User currentUser) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+        post.setViewCount(post.getViewCount() + 1);
+        postRepository.save(post);
+        return mapToResponse(post, currentUser);
+    }
+
+    public PostResponse createPost(PostRequest request, User author) {
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        Post post = Post.builder()
+                .title(request.getTitle())
+                .content(request.getContent())
+                .author(author)
+                .category(category)
+                .mediaUrl(request.getMediaUrl())
+                .build();
+
+        post = postRepository.save(post);
+        return mapToResponse(post, author);
+    }
+
+    public PostResponse updatePost(UUID postId, PostRequest request, User currentUser) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        if (!post.getAuthor().getUserId().equals(currentUser.getUserId())) {
+            throw new RuntimeException("You can only edit your own posts");
+        }
+
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        post.setCategory(category);
+        if (request.getMediaUrl() != null) post.setMediaUrl(request.getMediaUrl());
+
+        post = postRepository.save(post);
+        return mapToResponse(post, currentUser);
+    }
+
+    public void deletePost(UUID postId, User currentUser) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        if (!post.getAuthor().getUserId().equals(currentUser.getUserId())
+                && !currentUser.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("You don't have permission to delete this post");
+        }
+
+        postRepository.delete(post);
+    }
+
+    @Transactional
+    public PostResponse votePost(UUID postId, boolean isUpvote, User currentUser) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        int newVoteType = isUpvote ? 1 : -1;
+
+        Optional<Vote> existingVote = voteRepository.findByUserUserIdAndPostPostId(
+                currentUser.getUserId(), postId);
+
+        if (existingVote.isPresent()) {
+            Vote vote = existingVote.get();
+            if (vote.getVoteType() == newVoteType) {
+                // Same vote again = remove vote (toggle off)
+                if (newVoteType == 1) {
+                    post.setUpvotes(post.getUpvotes() - 1);
+                } else {
+                    post.setDownvotes(post.getDownvotes() - 1);
+                }
+                voteRepository.delete(vote);
+            } else {
+                // Switching vote direction
+                if (newVoteType == 1) {
+                    post.setUpvotes(post.getUpvotes() + 1);
+                    post.setDownvotes(post.getDownvotes() - 1);
+                } else {
+                    post.setUpvotes(post.getUpvotes() - 1);
+                    post.setDownvotes(post.getDownvotes() + 1);
+                }
+                vote.setVoteType(newVoteType);
+                voteRepository.save(vote);
+            }
+        } else {
+            // New vote
+            Vote vote = Vote.builder()
+                    .user(currentUser)
+                    .post(post)
+                    .voteType(newVoteType)
+                    .build();
+            voteRepository.save(vote);
+
+            if (isUpvote) {
+                post.setUpvotes(post.getUpvotes() + 1);
+            } else {
+                post.setDownvotes(post.getDownvotes() + 1);
+            }
+        }
+
+        post = postRepository.save(post);
+        return mapToResponse(post, currentUser);
+    }
+
+    @Transactional
+    public PostResponse toggleSavePost(UUID postId, User currentUser) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        Optional<SavedPost> existing = savedPostRepository.findByUserUserIdAndPostPostId(
+                currentUser.getUserId(), postId);
+
+        if (existing.isPresent()) {
+            savedPostRepository.delete(existing.get());
+        } else {
+            SavedPost saved = SavedPost.builder()
+                    .user(currentUser)
+                    .post(post)
+                    .build();
+            savedPostRepository.save(saved);
+        }
+
+        return mapToResponse(post, currentUser);
+    }
+
+    public Page<PostResponse> getSavedPosts(User currentUser, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Post> posts = savedPostRepository.findByUserUserIdOrderBySavedAtDesc(currentUser.getUserId(), pageable)
+                .map(SavedPost::getPost);
+        return mapPageToResponse(posts, currentUser);
+    }
+
+    private Page<PostResponse> mapPageToResponse(Page<Post> posts, User currentUser) {
+        if (!posts.hasContent()) {
+            return posts.map(post -> mapToResponse(post, currentUser));
+        }
+
+        List<UUID> postIds = posts.stream().map(Post::getPostId).collect(Collectors.toList());
+
+        Map<UUID, Integer> commentCounts = new HashMap<>();
+        for (Object[] result : commentRepository.countCommentsByPostIds(postIds)) {
+            commentCounts.put((UUID) result[0], ((Number) result[1]).intValue());
+        }
+
+        Map<UUID, Integer> userVotes = new HashMap<>();
+        Set<UUID> savedPostIds = new HashSet<>();
+
+        if (currentUser != null) {
+            List<Vote> votes = voteRepository.findByUserIdAndPostIds(currentUser.getUserId(), postIds);
+            for (Vote vote : votes) {
+                userVotes.put(vote.getPost().getPostId(), vote.getVoteType());
+            }
+            savedPostIds.addAll(savedPostRepository.findSavedPostIdsByUserIdAndPostIds(currentUser.getUserId(), postIds));
+        }
+
+        return posts.map(post -> {
+            int commentCount = commentCounts.getOrDefault(post.getPostId(), 0);
+            Integer userVote = userVotes.get(post.getPostId());
+            boolean isSaved = savedPostIds.contains(post.getPostId());
+            return buildPostResponse(post, commentCount, userVote, isSaved);
+        });
+    }
+
+    private PostResponse mapToResponse(Post post, User currentUser) {
+        int commentCount = (int) commentRepository.countByPostPostId(post.getPostId());
+        Integer userVote = null;
+        boolean isSaved = false;
+
+        if (currentUser != null) {
+            Optional<Vote> userVoteOpt = voteRepository.findByUserUserIdAndPostPostId(
+                    currentUser.getUserId(), post.getPostId());
+            userVote = userVoteOpt.map(Vote::getVoteType).orElse(null);
+            isSaved = savedPostRepository.existsByUserUserIdAndPostPostId(
+                    currentUser.getUserId(), post.getPostId());
+        }
+
+        return buildPostResponse(post, commentCount, userVote, isSaved);
+    }
+
+    private PostResponse buildPostResponse(Post post, int commentCount, Integer userVote, boolean isSaved) {
+        return PostResponse.builder()
+                .postId(post.getPostId())
+                .title(post.getTitle())
+                .content(post.getContent())
+                .authorUsername(post.getAuthor().getUsername())
+                .authorId(post.getAuthor().getUserId())
+                .authorImageUrl(post.getAuthor().getProfileImageUrl())
+                .categoryName(post.getCategory().getName())
+                .categoryId(post.getCategory().getCategoryId())
+                .upvotes(post.getUpvotes())
+                .downvotes(post.getDownvotes())
+                .viewCount(post.getViewCount())
+                .commentCount(commentCount)
+                .mediaUrl(post.getMediaUrl())
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .userVote(userVote)
+                .isSaved(isSaved)
+                .build();
+    }
+
+    private Pageable createPageable(int page, int size, String sort) {
+        return switch (sort) {
+            case "trending" -> PageRequest.of(page, size, Sort.by("upvotes").descending());
+            case "oldest" -> PageRequest.of(page, size, Sort.by("createdAt").ascending());
+            default -> PageRequest.of(page, size, Sort.by("createdAt").descending());
+        };
+    }
+}
