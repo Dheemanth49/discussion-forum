@@ -44,7 +44,7 @@ def embed_post(post_id):
 
         print("Fetching post content...")
         cursor.execute(
-            "SELECT title, body FROM posts WHERE post_id = %s",
+            "SELECT title, content FROM posts WHERE post_id = %s",
             (post_id,)
         )
 
@@ -56,8 +56,8 @@ def embed_post(post_id):
 
         print("Post found")
 
-        title, body = result
-        combined_text = f"{title} {body}"
+        title, content = result
+        combined_text = f"{title} {content}"
 
         print("Combined text:")
         print(combined_text)
