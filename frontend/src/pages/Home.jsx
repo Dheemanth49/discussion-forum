@@ -206,9 +206,17 @@ export default function Home() {
                         </div>
                         <span className="text-[11px] sm:text-xs font-bold truncate max-w-[100px] sm:max-w-[120px]">@{post.authorUsername}</span>
                         <span className="text-[9px] sm:text-[10px] text-on-surface/30 uppercase tracking-widest shrink-0">{timeAgo(post.createdAt)}</span>
-                        <span className={`ml-auto px-2 sm:px-3 py-0.5 sm:py-1 ${cTheme.bg} ${cTheme.text} text-[9px] sm:text-[10px] font-bold rounded-full uppercase tracking-tighter truncate max-w-[80px] sm:max-w-[100px]`}>
-                          {post.categoryName}
-                        </span>
+                        <div className="ml-auto flex items-center gap-2">
+                          {post.relevanceScore != null && (
+                            <span title="Semantic Similarity" className="bg-[#65dabc]/10 text-[#65dabc] px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-bold rounded-full tracking-tighter flex items-center gap-1 border border-[#65dabc]/20">
+                              <span className="material-symbols-outlined text-[10px] sm:text-[12px]">radar</span>
+                              {(post.relevanceScore * 100).toFixed(0)}% Match
+                            </span>
+                          )}
+                          <span className={`px-2 sm:px-3 py-0.5 sm:py-1 ${cTheme.bg} ${cTheme.text} text-[9px] sm:text-[10px] font-bold rounded-full uppercase tracking-tighter truncate max-w-[80px] sm:max-w-[100px]`}>
+                            {post.categoryName}
+                          </span>
+                        </div>
                       </div>
 
                       <h3 className="text-base sm:text-lg md:text-xl font-headline font-extrabold mb-2 sm:mb-3 leading-tight group-hover:text-primary transition-colors break-words">
