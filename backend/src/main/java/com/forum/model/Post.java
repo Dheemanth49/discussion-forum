@@ -57,6 +57,9 @@ public class Post {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "embedding", columnDefinition = "vector(768)", insertable = false, updatable = false)
+    private String embedding;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

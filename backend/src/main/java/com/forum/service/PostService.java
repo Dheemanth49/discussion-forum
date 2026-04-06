@@ -24,6 +24,7 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
     private final SavedPostRepository savedPostRepository;
+    private final EmbeddingService embeddingService;
 
     public Page<PostResponse> getAllPosts(int page, int size, String sort, User currentUser) {
         Pageable pageable = createPageable(page, size, sort);
@@ -77,6 +78,10 @@ public class PostService {
                 .build();
 
         post = postRepository.save(post);
+
+        // Trigger embedding generation via Python service
+        embeddingService.processPost(post.getPostId());
+
         return mapToResponse(post, author);
     }
 
