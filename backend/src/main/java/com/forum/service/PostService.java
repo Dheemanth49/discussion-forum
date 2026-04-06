@@ -2,6 +2,7 @@ package com.forum.service;
 
 import com.forum.dto.PostRequest;
 import com.forum.dto.PostResponse;
+import com.forum.dto.SummaryResponse;
 import com.forum.model.*;
 import com.forum.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
     private final SavedPostRepository savedPostRepository;
+    private final AiService aiService;
 
     public Page<PostResponse> getAllPosts(int page, int size, String sort, User currentUser) {
         Pageable pageable = createPageable(page, size, sort);
@@ -62,6 +64,42 @@ public class PostService {
         post.setViewCount(post.getViewCount() + 1);
         postRepository.save(post);
         return mapToResponse(post, currentUser);
+    }
+
+    public SummaryResponse getPostSummary(UUID postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found"));
+
+        List<Comment> comments = commentRepository.findByPostPostIdOrderByCreatedAtAsc(postId);
+
+        // Cap to latest 50 comments
+        if (comments.size() > 50) {
+            comments = comments.subList(comments.size() - 50, comments.size());
+        }
+
+        StringBuilder discussionBuilder = new StringBuilder();
+
+        // ✅ CLEAN STRUCTURED INPUT (VERY IMPORTANT)
+        discussionBuilder.append("Title: ").append(post.getTitle()).append("\n\n");
+        discussionBuilder.append("Post: ").append(post.getContent()).append("\n\n");
+
+        if (comments.isEmpty()) {
+            discussionBuilder.append("No comments yet.");
+        } else {
+            discussionBuilder.append("Comments:\n");
+            for (Comment comment : comments) {
+                discussionBuilder.append("- ")
+                        .append(comment.getAuthor().getUsername())
+                        .append(": ")
+                        .append(comment.getContent())
+                        .append("\n");
+            }
+        }
+
+        // 🚀 THIS is what goes to AI
+        String fullDiscussion = discussionBuilder.toString();
+
+        return new SummaryResponse(aiService.generateSummary(fullDiscussion));
     }
 
     public PostResponse createPost(PostRequest request, User author) {
