@@ -19,7 +19,15 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
 
     @Query("SELECT p FROM Post p WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%'))")
-    Page<Post> searchPosts(@Param("query") String query, Pageable pageable);
+    Page<Post> searchPostsText(@Param("query") String query, Pageable pageable);
+
+    @Query(value = "SELECT p.post_id, (1.0 - (p.embedding <=> CAST(:embedding AS vector))) as score " +
+           "FROM posts p " +
+           "WHERE p.embedding IS NOT NULL " +
+           "ORDER BY score DESC",
+           countQuery = "SELECT count(*) FROM posts WHERE embedding IS NOT NULL",
+           nativeQuery = true)
+    Page<Object[]> searchPostsSemantic(@Param("embedding") String embeddingString, Pageable pageable);
 
     @Query("SELECT p FROM Post p ORDER BY p.upvotes DESC")
     Page<Post> findTrending(Pageable pageable);
