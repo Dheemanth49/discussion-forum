@@ -25,7 +25,11 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
     private final SavedPostRepository savedPostRepository;
+
     private final AiService aiService;
+
+    private final EmbeddingService embeddingService;
+
 
     public Page<PostResponse> getAllPosts(int page, int size, String sort, User currentUser) {
         Pageable pageable = createPageable(page, size, sort);
@@ -43,8 +47,40 @@ public class PostService {
     }
 
     public Page<PostResponse> searchPosts(String query, int page, int size, User currentUser) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return mapPageToResponse(postRepository.searchPosts(query, pageable), currentUser);
+        Pageable pageable = PageRequest.of(page, size);
+        
+        String embeddingStr = embeddingService.generateQueryEmbedding(query);
+        
+        if (embeddingStr != null) {
+            Page<Object[]> semanticResults = postRepository.searchPostsSemantic(embeddingStr, pageable);
+            
+            List<UUID> postIds = new ArrayList<>();
+            Map<UUID, Double> scores = new HashMap<>();
+            
+            for (Object[] obj : semanticResults.getContent()) {
+                UUID id = obj[0] instanceof String ? UUID.fromString((String) obj[0]) : (UUID) obj[0];
+                postIds.add(id);
+                scores.put(id, ((Number) obj[1]).doubleValue());
+            }
+            
+            List<Post> posts = postRepository.findAllById(postIds);
+            Map<UUID, Post> postMap = posts.stream().collect(Collectors.toMap(Post::getPostId, p -> p));
+            List<Post> orderedPosts = postIds.stream().map(postMap::get).filter(Objects::nonNull).collect(Collectors.toList());
+            
+            Page<Post> postPage = new org.springframework.data.domain.PageImpl<>(orderedPosts, pageable, semanticResults.getTotalElements());
+            
+            Page<PostResponse> responsePage = mapPageToResponse(postPage, currentUser);
+            
+            responsePage.getContent().forEach(resp -> {
+                resp.setRelevanceScore(scores.get(resp.getPostId()));
+            });
+            
+            return responsePage;
+        } else {
+            // Fallback to text search if embedding service is down
+            Pageable textPageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            return mapPageToResponse(postRepository.searchPostsText(query, textPageable), currentUser);
+        }
     }
 
     public Page<PostResponse> getTrendingPosts(int page, int size, User currentUser) {
@@ -115,6 +151,10 @@ public class PostService {
                 .build();
 
         post = postRepository.save(post);
+
+        // Trigger embedding generation via Python service
+        embeddingService.processPost(post.getPostId());
+
         return mapToResponse(post, author);
     }
 

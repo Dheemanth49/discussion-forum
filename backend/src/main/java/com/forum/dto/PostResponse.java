@@ -26,4 +26,5 @@ public class PostResponse {
     // User-specific fields (null when not authenticated)
     private Integer userVote; // 1 = upvoted, -1 = downvoted, null = not voted
     private Boolean isSaved;  // true if current user saved this post
+    private Double relevanceScore;
 }
