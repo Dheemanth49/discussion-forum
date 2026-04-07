@@ -32,3 +32,6 @@ logs/
 # Windows files
 Thumbs.db
 Desktop.ini
+
+embeddingservice/venv
+embeddingservice/.env__pycache__/

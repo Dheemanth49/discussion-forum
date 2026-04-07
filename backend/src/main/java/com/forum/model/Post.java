@@ -3,6 +3,10 @@ package com.forum.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.UuidGenerator;
+
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -16,7 +20,7 @@ import java.util.UUID;
 public class Post {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
     @Column(name = "post_id")
     private UUID postId;
 
@@ -28,6 +32,7 @@ public class Post {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User author;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -56,6 +61,9 @@ public class Post {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "embedding", columnDefinition = "vector(768)", insertable = false, updatable = false)
+    private String embedding;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
