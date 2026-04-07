@@ -33,5 +33,6 @@ logs/
 Thumbs.db
 Desktop.ini
 
-embeddingservice/venv
-embeddingservice/.env__pycache__/
+embeddingservice/venv/
+embeddingservice/__pycache__/
+*.pyc

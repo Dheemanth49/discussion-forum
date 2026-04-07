@@ -3,7 +3,7 @@ import axios from 'axios';
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8081/api',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 10000
+  timeout: 60000 // Increased to 60 seconds to match backend
 });
 
 API.interceptors.request.use((config) => {

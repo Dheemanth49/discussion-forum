@@ -108,53 +108,7 @@ function ReportModal({ isOpen, onClose, targetType, targetId, onSuccess }) {
   );
 }
 
-/* ─── Summary Modal ─── */
-function SummaryModal({ isOpen, onClose, summary, loading, error }) {
-  if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 modal-overlay" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-      <div className="relative w-full max-w-2xl bg-surface-container border border-outline-variant/20 rounded-3xl p-6 sm:p-8 shadow-2xl modal-content flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-6 shrink-0">
-          <h3 className="text-xl sm:text-2xl font-headline font-bold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">auto_awesome</span>
-            AI Thread Summary
-          </h3>
-          <button onClick={onClose} className="p-2 hover:bg-surface-container-high rounded-full transition-colors shrink-0">
-            <span className="material-symbols-outlined text-on-surface-variant">close</span>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-          {loading ? (
-            <div className="py-12 flex flex-col items-center justify-center text-on-surface-variant space-y-4">
-              <div className="w-10 h-10 border-4 border-surface-variant border-t-primary rounded-full animate-spin"></div>
-              <p className="font-medium animate-pulse">Analyzing discussion thread...</p>
-            </div>
-          ) : error ? (
-            <div className="py-8 text-center bg-error-container/20 rounded-2xl border border-error/20 p-6">
-              <span className="material-symbols-outlined text-error text-3xl mb-2">error</span>
-              <p className="text-error font-medium">{error}</p>
-            </div>
-          ) : (
-            <div className="markdown-content text-on-surface-variant font-body text-sm sm:text-base leading-relaxed break-words prose prose-invert max-w-none prose-a:text-primary prose-p:mb-4 bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant/10 shadow-inner">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary || 'No summary available.'}</ReactMarkdown>
-            </div>
-          )}
-        </div>
-
-        {!loading && (
-          <div className="mt-6 pt-4 border-t border-outline-variant/15 flex justify-end shrink-0">
-            <button onClick={onClose} className="px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface font-bold text-sm hover:bg-surface-container-highest transition-all active:scale-95">
-              Close
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ─── Comment Item ─── */
 function CommentItem({ comment, postId, onReply, level = 0 }) {
@@ -302,7 +256,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [reportModal, setReportModal] = useState({ open: false, type: '', id: '' });
-  const [summaryModal, setSummaryModal] = useState({ open: false, data: '', loading: false, error: '' });
+  const [summaryState, setSummaryState] = useState({ show: false, data: '', loading: false, error: '' });
   const [voteAnim, setVoteAnim] = useState(null);
   const { isAuthenticated, user } = useAuth();
 
@@ -310,13 +264,13 @@ export default function PostDetail() {
 
   const handleSummarize = async () => {
     if (!isAuthenticated()) return;
-    setSummaryModal({ open: true, data: '', loading: true, error: '' });
+    setSummaryState({ show: true, data: '', loading: true, error: '' });
     try {
       const res = await API.get(`/posts/${postId}/summary`);
-      setSummaryModal({ open: true, data: res.data.summary, loading: false, error: '' });
+      setSummaryState({ show: true, data: res.data.summary, loading: false, error: '' });
     } catch (err) {
-      setSummaryModal({ 
-        open: true, 
+      setSummaryState({ 
+        show: true, 
         data: '', 
         loading: false, 
         error: err.response?.status === 401 ? 'You must be logged in to use this feature.' : 'Failed to generate summary. Please try again.' 
@@ -528,6 +482,40 @@ export default function PostDetail() {
           </footer>
         </article>
 
+        {/* AI Summary Section - Inline */}
+        {summaryState.show && (
+          <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-primary/10 shadow-sm overflow-hidden relative group">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">auto_awesome</span>
+                <h3 className="text-lg sm:text-xl font-headline font-bold text-on-surface">AI Thread Summary</h3>
+              </div>
+              <button 
+                onClick={() => setSummaryState({ ...summaryState, show: false })}
+                className="p-2 hover:bg-surface-container-high rounded-full transition-colors"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant text-sm">close</span>
+              </button>
+            </div>
+
+            {summaryState.loading ? (
+              <div className="py-8 flex flex-col items-center justify-center text-on-surface-variant space-y-3">
+                <div className="w-8 h-8 border-3 border-surface-variant border-t-primary rounded-full animate-spin"></div>
+                <p className="text-sm font-medium animate-pulse">Analyzing discussion...</p>
+              </div>
+            ) : summaryState.error ? (
+              <div className="py-6 text-center bg-error-container/10 rounded-xl border border-error/20 px-4">
+                <span className="material-symbols-outlined text-error text-2xl mb-1">error</span>
+                <p className="text-error text-sm font-medium">{summaryState.error}</p>
+              </div>
+            ) : (
+              <div className="markdown-content text-on-surface-variant font-body text-sm sm:text-base leading-relaxed break-words prose prose-invert max-w-none prose-p:mb-3 bg-surface-container-lowest/50 p-4 sm:p-6 rounded-xl border border-outline-variant/5">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryState.data || 'No summary available.'}</ReactMarkdown>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Comments Section */}
         <section className="space-y-6 sm:space-y-8">
           <div className="flex items-center justify-between">
@@ -628,14 +616,7 @@ export default function PostDetail() {
         onSuccess={() => showToast('Report submitted successfully!')}
       />
 
-      {/* Summary Modal */}
-      <SummaryModal
-        isOpen={summaryModal.open}
-        onClose={() => setSummaryModal(s => ({ ...s, open: false }))}
-        summary={summaryModal.data}
-        loading={summaryModal.loading}
-        error={summaryModal.error}
-      />
+
 
       {/* Toast */}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}

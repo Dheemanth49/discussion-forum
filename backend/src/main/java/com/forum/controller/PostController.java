@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,10 +48,8 @@ public class PostController {
     }
 
     @GetMapping("/{postId}/summary")
-    public ResponseEntity<SummaryResponse> getPostSummary(@PathVariable UUID postId, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-            return ResponseEntity.status(401).build();
-        }
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<SummaryResponse> getPostSummary(@PathVariable UUID postId) {
         return ResponseEntity.ok(postService.getPostSummary(postId));
     }
 

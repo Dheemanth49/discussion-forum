@@ -17,7 +17,7 @@ public class EmbeddingService {
     private final RestTemplate restTemplate;
     private final String embeddingServiceUrl;
 
-    public EmbeddingService(@Value("${embedding.service.url}") String embeddingServiceUrl) {
+    public EmbeddingService(@Value("${embedding.service.url:http://localhost:7645}") String embeddingServiceUrl) {
         this.restTemplate = new RestTemplate();
         this.embeddingServiceUrl = embeddingServiceUrl;
     }
