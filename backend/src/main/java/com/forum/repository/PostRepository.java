@@ -29,8 +29,8 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
            nativeQuery = true)
     Page<Object[]> searchPostsSemantic(@Param("embedding") String embeddingString, Pageable pageable);
 
-    @Query("SELECT p FROM Post p ORDER BY p.upvotes DESC")
-    Page<Post> findTrending(Pageable pageable);
+    @Query("SELECT p FROM Post p WHERE p.createdAt >= :since ORDER BY p.upvotes DESC")
+    Page<Post> findTrending(@Param("since") java.time.LocalDateTime since, Pageable pageable);
 
     @Query("SELECT p FROM Post p WHERE SIZE(p.comments) = 0")
     Page<Post> findUnanswered(Pageable pageable);

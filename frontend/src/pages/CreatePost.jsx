@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MDEditor from '@uiw/react-md-editor';
 
 export default function CreatePost() {
   const [form, setForm] = useState({ title: '', content: '', categoryId: '' });
   const [categories, setCategories] = useState([]);
-  const [preview, setPreview] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -27,7 +25,11 @@ export default function CreatePost() {
       const res = await API.post('/media/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setForm({ ...form, mediaUrl: res.data.url });
+      setForm(prev => ({ 
+        ...prev, 
+        mediaUrl: res.data.url,
+        content: prev.content + (prev.content ? '\n\n' : '') + `![Uploaded Image](${res.data.url})\n`
+      }));
     } catch (err) {
       setError('Image upload failed');
     } finally {
@@ -51,22 +53,11 @@ export default function CreatePost() {
     }
   };
 
-  const insertMarkdown = (prefix, suffix = '') => {
-    const textarea = document.getElementById('markdown-editor');
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = form.content;
-    const before = text.substring(0, start);
-    const selected = text.substring(start, end);
-    const after = text.substring(end, text.length);
-    const insertedText = selected ? `${prefix}${selected}${suffix}` : `${prefix}text${suffix}`;
-    setForm({ ...form, content: before + insertedText + after });
-  };
+
 
   return (
     <>
-      <main className="pt-24 pb-12 px-4 flex justify-center w-full max-w-[1440px] mx-auto min-h-screen relative z-10">
+      <main className="pt-24 pb-12 px-4 flex justify-center w-full max-w-[1440px] mx-auto min-h-screen relative">
         <div className="w-full max-w-[800px]">
           {/* Page Header */}
           <header className="mb-8">
@@ -112,62 +103,13 @@ export default function CreatePost() {
             </div>
 
             {/* Editor Shell */}
-            <div className="bg-surface-container-low rounded-xl overflow-hidden flex flex-col min-h-[500px] border border-outline-variant/20">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between px-4 py-2 bg-surface-container border-b border-outline-variant/10 flex-wrap gap-2">
-                <div className="flex items-center gap-1">
-                  <button onClick={() => insertMarkdown('**', '**')} className="p-2 hover:bg-surface-container-high rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-lg">format_bold</span></button>
-                  <button onClick={() => insertMarkdown('*', '*')} className="p-2 hover:bg-surface-container-high rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-lg">format_italic</span></button>
-                  <button onClick={() => insertMarkdown('`', '`')} className="p-2 hover:bg-surface-container-high rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-lg">code</span></button>
-                  <div className="w-px h-6 bg-outline-variant/20 mx-1"></div>
-                  <button onClick={() => insertMarkdown('[text](', ')')} className="p-2 hover:bg-surface-container-high rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-lg">link</span></button>
-                  <button onClick={() => insertMarkdown('> ')} className="p-2 hover:bg-surface-container-high rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-lg">format_quote</span></button>
-                  <div className="w-px h-6 bg-outline-variant/20 mx-1"></div>
-                  <button onClick={() => insertMarkdown('- ')} className="p-2 hover:bg-surface-container-high rounded text-on-surface-variant hover:text-primary transition-colors"><span className="material-symbols-outlined text-lg">format_list_bulleted</span></button>
-                </div>
-                
-                <button 
-                  onClick={() => setPreview(!preview)}
-                  className={`flex items-center gap-2 px-3 py-1 rounded text-sm font-label transition-colors ${preview ? 'bg-primary/20 text-primary' : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-bright'}`}
-                >
-                  <span className="material-symbols-outlined text-sm">{preview ? 'edit' : 'visibility'}</span>
-                  {preview ? 'Edit mode' : 'Preview toggle'}
-                </button>
-              </div>
-
-              {/* Split View Area (or single view depending on screen size, currently forced split on md screens if preview is active) */}
-              <div className="flex flex-col md:flex-row flex-1 overflow-hidden h-full">
-                
-                {/* Markdown Editor */}
-                <div className={`bg-surface-container p-6 relative flex-1 min-h-[300px] ${preview ? 'hidden md:block w-full md:w-1/2' : 'w-full'}`}>
-                  <textarea 
-                    id="markdown-editor"
-                    className="w-full h-full bg-transparent border-none focus:ring-0 resize-none font-mono text-on-surface placeholder:text-outline-variant leading-relaxed text-sm outline-none" 
-                    placeholder="Write your content here in Markdown..."
-                    value={form.content}
-                    onChange={e => setForm({ ...form, content: e.target.value })}
-                  ></textarea>
-                  <div className="absolute bottom-4 right-6 text-[10px] uppercase tracking-widest text-outline-variant font-label">Editor</div>
-                </div>
-
-                {/* Live Preview */}
-                <div className={`bg-surface-container-lowest p-6 border-t md:border-t-0 md:border-l border-outline-variant/10 relative overflow-y-auto flex-1 min-h-[300px] ${preview ? 'block w-full md:w-1/2' : 'hidden'}`}>
-                  <div className="prose prose-invert max-w-none text-on-surface-variant font-body">
-                    {form.content ? (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{form.content}</ReactMarkdown>
-                    ) : (
-                      <>
-                        <h3 className="text-on-surface font-headline font-bold mb-4">Post Preview</h3>
-                        <p className="mb-4">Your formatted content will appear here in real-time as you write...</p>
-                        <div className="p-4 bg-surface-container-highest/30 rounded-lg italic border-l-2 border-primary/30">
-                          "This is how a quote might look."
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="absolute bottom-4 right-6 text-[10px] uppercase tracking-widest text-outline-variant font-label">Preview</div>
-                </div>
-              </div>
+            <div data-color-mode="dark" className="border border-outline-variant/20 rounded-xl overflow-hidden">
+              <MDEditor
+                value={form.content}
+                onChange={val => setForm({ ...form, content: val || '' })}
+                height={500}
+                className="w-full"
+              />
             </div>
 
             {/* Media Upload Zone */}
@@ -211,8 +153,8 @@ export default function CreatePost() {
       </main>
 
       {/* Background Atmospheric Glow */}
-      <div className="fixed -top-24 -left-24 w-96 h-96 bg-secondary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-      <div className="fixed top-1/2 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none z-0"></div>
+      <div className="fixed -top-24 -left-24 w-96 h-96 bg-secondary/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+      <div className="fixed top-1/2 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[80px] pointer-events-none -z-10"></div>
     </>
   );
 }

@@ -5,6 +5,7 @@ import com.forum.dto.UserResponse;
 import com.forum.model.Category;
 import com.forum.service.CategoryService;
 import com.forum.service.ModerationService;
+import com.forum.service.PostService;
 import com.forum.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,13 +25,13 @@ public class AdminController {
     private final ModerationService moderationService;
     private final CategoryService categoryService;
     private final ReportService reportService;
+    private final PostService postService;
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Long>> getStats() {
         return ResponseEntity.ok(Map.of(
                 "totalUsers", moderationService.getTotalUsers(),
                 "totalPosts", moderationService.getTotalPosts(),
-                "totalComments", moderationService.getTotalComments(),
                 "pendingReports", reportService.getPendingReportCount()
         ));
     }
@@ -112,5 +113,11 @@ public class AdminController {
     public ResponseEntity<Void> deleteReport(@PathVariable UUID reportId) {
         reportService.deleteReport(reportId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reembed-all-posts")
+    public ResponseEntity<Map<String, Object>> reembedAllPosts() {
+        long count = postService.triggerReembedAllPosts();
+        return ResponseEntity.ok(Map.of("message", "Embedding triggered for all posts", "count", count));
     }
 }
