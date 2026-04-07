@@ -2,6 +2,7 @@ package com.forum.controller;
 
 import com.forum.dto.PostRequest;
 import com.forum.dto.PostResponse;
+import com.forum.dto.SummaryResponse;
 import com.forum.model.User;
 import com.forum.service.PostService;
 import com.forum.service.UserService;
@@ -43,6 +44,14 @@ public class PostController {
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPostById(@PathVariable UUID postId, Authentication authentication) {
         return ResponseEntity.ok(postService.getPostById(postId, getCurrentUser(authentication)));
+    }
+
+    @GetMapping("/{postId}/summary")
+    public ResponseEntity<SummaryResponse> getPostSummary(@PathVariable UUID postId, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(postService.getPostSummary(postId));
     }
 
     @GetMapping("/category/{categoryId}")

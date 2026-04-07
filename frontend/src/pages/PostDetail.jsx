@@ -106,6 +106,54 @@ function ReportModal({ isOpen, onClose, targetType, targetId, onSuccess }) {
   );
 }
 
+/* ─── Summary Modal ─── */
+function SummaryModal({ isOpen, onClose, summary, loading, error }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 modal-overlay" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      <div className="relative w-full max-w-2xl bg-surface-container border border-outline-variant/20 rounded-3xl p-6 sm:p-8 shadow-2xl modal-content flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6 shrink-0">
+          <h3 className="text-xl sm:text-2xl font-headline font-bold text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">auto_awesome</span>
+            AI Thread Summary
+          </h3>
+          <button onClick={onClose} className="p-2 hover:bg-surface-container-high rounded-full transition-colors shrink-0">
+            <span className="material-symbols-outlined text-on-surface-variant">close</span>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          {loading ? (
+            <div className="py-12 flex flex-col items-center justify-center text-on-surface-variant space-y-4">
+              <div className="w-10 h-10 border-4 border-surface-variant border-t-primary rounded-full animate-spin"></div>
+              <p className="font-medium animate-pulse">Analyzing discussion thread...</p>
+            </div>
+          ) : error ? (
+            <div className="py-8 text-center bg-error-container/20 rounded-2xl border border-error/20 p-6">
+              <span className="material-symbols-outlined text-error text-3xl mb-2">error</span>
+              <p className="text-error font-medium">{error}</p>
+            </div>
+          ) : (
+            <div className="markdown-content text-on-surface-variant font-body text-sm sm:text-base leading-relaxed break-words prose prose-invert max-w-none prose-a:text-primary prose-p:mb-4 bg-surface-container-lowest p-5 sm:p-6 rounded-2xl border border-outline-variant/10 shadow-inner">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary || 'No summary available.'}</ReactMarkdown>
+            </div>
+          )}
+        </div>
+
+        {!loading && (
+          <div className="mt-6 pt-4 border-t border-outline-variant/15 flex justify-end shrink-0">
+            <button onClick={onClose} className="px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface font-bold text-sm hover:bg-surface-container-highest transition-all active:scale-95">
+              Close
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Comment Item ─── */
 function CommentItem({ comment, postId, onReply, level = 0 }) {
   const [showReply, setShowReply] = useState(false);
@@ -230,10 +278,27 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [reportModal, setReportModal] = useState({ open: false, type: '', id: '' });
+  const [summaryModal, setSummaryModal] = useState({ open: false, data: '', loading: false, error: '' });
   const [voteAnim, setVoteAnim] = useState(null);
   const { isAuthenticated, user } = useAuth();
 
   const showToast = (msg) => { setToast(msg); };
+
+  const handleSummarize = async () => {
+    if (!isAuthenticated()) return;
+    setSummaryModal({ open: true, data: '', loading: true, error: '' });
+    try {
+      const res = await API.get(`/posts/${postId}/summary`);
+      setSummaryModal({ open: true, data: res.data.summary, loading: false, error: '' });
+    } catch (err) {
+      setSummaryModal({ 
+        open: true, 
+        data: '', 
+        loading: false, 
+        error: err.response?.status === 401 ? 'You must be logged in to use this feature.' : 'Failed to generate summary. Please try again.' 
+      });
+    }
+  };
 
   const loadData = () => {
     Promise.all([
@@ -388,8 +453,18 @@ export default function PostDetail() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end flex-1 sm:flex-none">
               <div className="text-xs sm:text-sm font-bold text-on-surface-variant/50 mr-1 sm:mr-2 hidden sm:block">👁 {post.viewCount} Views</div>
+              {isAuthenticated() && (
+                <button 
+                  onClick={handleSummarize} 
+                  className="mr-1 flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold text-xs sm:text-sm transition-all bg-gradient-to-br from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 text-primary border border-primary/20 shadow-sm"
+                  title="Generate AI Summary"
+                >
+                  <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                  <span className="hidden sm:inline">Summarize</span>
+                </button>
+              )}
               <button onClick={handleSave} className={`p-2 sm:p-3 rounded-full transition-all ${post.isSaved ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-high'}`} title={post.isSaved ? 'Unsave post' : 'Save post'}>
                 <span className="material-symbols-outlined text-lg sm:text-xl" style={post.isSaved ? { fontVariationSettings: "'FILL' 1" } : {}}>bookmark</span>
               </button>
@@ -505,6 +580,15 @@ export default function PostDetail() {
         targetType={reportModal.type}
         targetId={reportModal.id}
         onSuccess={() => showToast('Report submitted successfully!')}
+      />
+
+      {/* Summary Modal */}
+      <SummaryModal
+        isOpen={summaryModal.open}
+        onClose={() => setSummaryModal(s => ({ ...s, open: false }))}
+        summary={summaryModal.data}
+        loading={summaryModal.loading}
+        error={summaryModal.error}
       />
 
       {/* Toast */}
