@@ -25,8 +25,11 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final VoteRepository voteRepository;
     private final SavedPostRepository savedPostRepository;
+
     private final AiService aiService;
+
     private final EmbeddingService embeddingService;
+
 
     public Page<PostResponse> getAllPosts(int page, int size, String sort, User currentUser) {
         Pageable pageable = createPageable(page, size, sort);
