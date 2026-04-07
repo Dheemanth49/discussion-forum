@@ -46,41 +46,82 @@ public class PostService {
         
         String embeddingStr = embeddingService.generateQueryEmbedding(query);
         
+        // 1. Get Text Search Results
+        Pageable textPageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Post> textResultsPage = postRepository.searchPostsText(query, textPageable);
+        List<Post> textResults = textResultsPage.getContent();
+
         if (embeddingStr != null) {
+            // 2. Get Semantic Search Results
             Page<Object[]> semanticResults = postRepository.searchPostsSemantic(embeddingStr, pageable);
             
-            List<UUID> postIds = new ArrayList<>();
-            Map<UUID, Double> scores = new HashMap<>();
+            if (semanticResults.isEmpty()) {
+                return mapPageToResponse(textResultsPage, currentUser);
+            }
+            
+            Map<UUID, Double> semanticScores = new HashMap<>();
+            List<UUID> semanticPostIds = new ArrayList<>();
             
             for (Object[] obj : semanticResults.getContent()) {
                 UUID id = obj[0] instanceof String ? UUID.fromString((String) obj[0]) : (UUID) obj[0];
-                postIds.add(id);
-                scores.put(id, ((Number) obj[1]).doubleValue());
+                semanticPostIds.add(id);
+                semanticScores.put(id, ((Number) obj[1]).doubleValue());
             }
             
-            List<Post> posts = postRepository.findAllById(postIds);
-            Map<UUID, Post> postMap = posts.stream().collect(Collectors.toMap(Post::getPostId, p -> p));
-            List<Post> orderedPosts = postIds.stream().map(postMap::get).filter(Objects::nonNull).collect(Collectors.toList());
+            // 3. Combine and De-duplicate
+            Set<UUID> allPostIds = new LinkedHashSet<>(); // Maintains order
             
-            Page<Post> postPage = new org.springframework.data.domain.PageImpl<>(orderedPosts, pageable, semanticResults.getTotalElements());
+            // Add semantic results first (usually more relevant)
+            // But only if score is decent (e.g. > 0.6)
+            for (UUID id : semanticPostIds) {
+                if (semanticScores.get(id) > 0.6) {
+                    allPostIds.add(id);
+                }
+            }
+            
+            // Add text results
+            for (Post p : textResults) {
+                allPostIds.add(p.getPostId());
+            }
+
+            // If still too few results, add lower score semantic results
+            if (allPostIds.size() < size) {
+                for (UUID id : semanticPostIds) {
+                    allPostIds.add(id);
+                }
+            }
+            
+            List<UUID> finalIds = new ArrayList<>(allPostIds);
+            // Limit to requested size
+            if (finalIds.size() > size) {
+                finalIds = finalIds.subList(0, size);
+            }
+            
+            List<Post> posts = postRepository.findAllById(finalIds);
+            Map<UUID, Post> postMap = posts.stream().collect(Collectors.toMap(Post::getPostId, p -> p));
+            List<Post> orderedPosts = finalIds.stream().map(postMap::get).filter(Objects::nonNull).collect(Collectors.toList());
+            
+            Page<Post> postPage = new org.springframework.data.domain.PageImpl<>(orderedPosts, pageable, Math.max(textResultsPage.getTotalElements(), semanticResults.getTotalElements()));
             
             Page<PostResponse> responsePage = mapPageToResponse(postPage, currentUser);
             
             responsePage.getContent().forEach(resp -> {
-                resp.setRelevanceScore(scores.get(resp.getPostId()));
+                Double score = semanticScores.get(resp.getPostId());
+                if (score != null) {
+                    resp.setRelevanceScore(score);
+                }
             });
             
             return responsePage;
         } else {
-            // Fallback to text search if embedding service is down
-            Pageable textPageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            return mapPageToResponse(postRepository.searchPostsText(query, textPageable), currentUser);
+            return mapPageToResponse(textResultsPage, currentUser);
         }
     }
 
     public Page<PostResponse> getTrendingPosts(int page, int size, User currentUser) {
         Pageable pageable = PageRequest.of(page, size);
-        return mapPageToResponse(postRepository.findTrending(pageable), currentUser);
+        java.time.LocalDateTime sevenDaysAgo = java.time.LocalDateTime.now().minusDays(7);
+        return mapPageToResponse(postRepository.findTrending(sevenDaysAgo, pageable), currentUser);
     }
 
     public Page<PostResponse> getUnansweredPosts(int page, int size, User currentUser) {
@@ -296,6 +337,12 @@ public class PostService {
                 .userVote(userVote)
                 .isSaved(isSaved)
                 .build();
+    }
+
+    public long triggerReembedAllPosts() {
+        List<Post> allPosts = postRepository.findAll();
+        allPosts.forEach(post -> embeddingService.processPost(post.getPostId()));
+        return allPosts.size();
     }
 
     private Pageable createPageable(int page, int size, String sort) {

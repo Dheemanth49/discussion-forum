@@ -34,4 +34,4 @@ Thumbs.db
 Desktop.ini
 
 embeddingservice/venv
-embeddingservice/.env
+embeddingservice/.env__pycache__/
