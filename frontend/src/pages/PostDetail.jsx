@@ -4,6 +4,8 @@ import { useAuth } from '../AuthContext';
 import API from '../api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 /* ─── Toast Component ─── */
 function Toast({ message, onClose }) {
@@ -213,7 +215,29 @@ function CommentItem({ comment, postId, onReply, level = 0 }) {
           </div>
 
           <div className={`text-on-surface-variant ${!isRoot ? 'text-xs sm:text-sm' : 'text-sm'} leading-relaxed break-words`}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{localComment.content}</ReactMarkdown>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code({node, inline, className, children, ...props}) {
+                  const match = /language-(\w+)/.exec(className || '')
+                  return !inline && match ? (
+                    <SyntaxHighlighter
+                      {...props}
+                      children={String(children).replace(/\n$/, '')}
+                      style={dracula}
+                      language={match[1]}
+                      PreTag="div"
+                    />
+                  ) : (
+                    <code {...props} className={className}>
+                      {children}
+                    </code>
+                  )
+                }
+              }}
+            >
+              {localComment.content}
+            </ReactMarkdown>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-on-surface-variant">
@@ -423,7 +447,29 @@ export default function PostDetail() {
 
           {/* Post Content */}
           <div className="markdown-content text-on-surface-variant font-body text-sm sm:text-base lg:text-lg break-words prose prose-invert max-w-none prose-a:text-primary prose-code:bg-surface-container-lowest prose-code:text-secondary prose-code:px-2 prose-code:rounded prose-blockquote:border-primary prose-blockquote:bg-primary/5 prose-blockquote:py-1">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code({node, inline, className, children, ...props}) {
+                  const match = /language-(\w+)/.exec(className || '')
+                  return !inline && match ? (
+                    <SyntaxHighlighter
+                      {...props}
+                      children={String(children).replace(/\n$/, '')}
+                      style={dracula}
+                      language={match[1]}
+                      PreTag="div"
+                    />
+                  ) : (
+                    <code {...props} className={className}>
+                      {children}
+                    </code>
+                  )
+                }
+              }}
+            >
+              {post.content}
+            </ReactMarkdown>
 
             {post.mediaUrl && (
               <div className="my-6 sm:my-8 rounded-xl overflow-hidden shadow-lg border border-outline-variant/20">
