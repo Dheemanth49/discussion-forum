@@ -14,11 +14,17 @@ HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", os.getenv("FLASK_PORT", "7645")))
 DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
+import torch
+
+# Limit PyTorch threads to reduce memory and CPU overhead
+torch.set_num_threads(1)
+
 print("Loading embedding model...")
 model = SentenceTransformer("BAAI/bge-base-en-v1.5")
 print("Model loaded successfully")
 
-executor = ThreadPoolExecutor(max_workers=5)
+# Limit concurrent workers to prevent huge memory spikes 
+executor = ThreadPoolExecutor(max_workers=2)
 
 
 def embed_text(text: str):
