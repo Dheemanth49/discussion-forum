@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt python-dotenv
 COPY . .
 
 # Let the platform know which port the app runs on
-EXPOSE 7645
+EXPOSE 7860
 
 # Start the Flask server with gunicorn for production
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-7645} --workers 1 --threads 5 --timeout 120 main:app"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-7860} --workers 1 --threads 5 --timeout 120 main:app"]

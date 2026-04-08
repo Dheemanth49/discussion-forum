@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
 HOST = os.getenv("FLASK_HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", os.getenv("FLASK_PORT", "7645")))
+PORT = int(os.getenv("PORT", os.getenv("FLASK_PORT", "7860")))
 DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
 import torch
