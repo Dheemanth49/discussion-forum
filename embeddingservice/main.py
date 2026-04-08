@@ -4,18 +4,21 @@ from concurrent.futures import ThreadPoolExecutor
 from db import get_connection
 import numpy as np
 import logging
+import os
 
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
+HOST = os.getenv("FLASK_HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", os.getenv("FLASK_PORT", "7645")))
+DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
 print("Loading embedding model...")
 model = SentenceTransformer("BAAI/bge-base-en-v1.5")
 print("Model loaded successfully")
 
 executor = ThreadPoolExecutor(max_workers=5)
-
 
 
 def embed_text(text: str):
@@ -26,7 +29,6 @@ def embed_text(text: str):
     )
     print("Embedding generated")
     return embedding.tolist()
-
 
 
 def embed_post(post_id):
@@ -89,7 +91,6 @@ def embed_post(post_id):
         print("--------------------------------------------------")
 
 
-
 @app.route("/")
 def home():
     print("Health check endpoint called")
@@ -146,10 +147,6 @@ def generate_query_embedding():
     })
 
 
-
-
-
-
 if __name__ == "__main__":
     print("Starting Flask embedding server...")
-    app.run(debug=True,port=7645)
+    app.run(host=HOST, port=PORT, debug=DEBUG)

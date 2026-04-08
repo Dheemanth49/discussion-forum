@@ -34,7 +34,7 @@ Ensure your PostgreSQL server is running and the `pgvector` extension is install
 Open a terminal in the `./embeddingservice` directory and run:
 ```bash
 pip install -r requirements.txt
-python app.py
+python main.py
 ```
 
 ### 3. Backend

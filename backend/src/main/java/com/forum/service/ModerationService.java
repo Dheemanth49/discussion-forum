@@ -55,6 +55,7 @@ public class ModerationService {
 
     public long getTotalUsers() { return userRepository.count(); }
     public long getTotalPosts() { return postRepository.count(); }
+    public long getTotalComments() { return commentRepository.count(); }
     public long getCommentCountByPost(UUID postId) { return commentRepository.countByPostPostId(postId); }
 
     private UserResponse mapToResponse(User user) {

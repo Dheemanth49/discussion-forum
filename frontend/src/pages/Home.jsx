@@ -29,11 +29,21 @@ export default function Home() {
   const [toast, setToast] = useState(null);
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search');
+  const categoryQuery = searchParams.get('category');
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     API.get('/categories').then(r => setCategories(r.data)).catch(() => { });
   }, []);
+
+  useEffect(() => {
+    if (categoryQuery) {
+      setActiveCategory(Number(categoryQuery));
+      setActiveTab('latest');
+      return;
+    }
+    setActiveCategory(null);
+  }, [categoryQuery]);
 
   useEffect(() => {
     setLoading(true);

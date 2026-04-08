@@ -32,6 +32,7 @@ public class AdminController {
         return ResponseEntity.ok(Map.of(
                 "totalUsers", moderationService.getTotalUsers(),
                 "totalPosts", moderationService.getTotalPosts(),
+                "totalComments", moderationService.getTotalComments(),
                 "pendingReports", reportService.getPendingReportCount()
         ));
     }

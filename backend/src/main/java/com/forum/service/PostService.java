@@ -28,10 +28,6 @@ public class PostService {
     private final AiService aiService;
     private final EmbeddingService embeddingService;
 
-    private final AiService aiService;
-
-    private final EmbeddingService embeddingService;
-
 
     public Page<PostResponse> getAllPosts(int page, int size, String sort, User currentUser) {
         Pageable pageable = createPageable(page, size, sort);

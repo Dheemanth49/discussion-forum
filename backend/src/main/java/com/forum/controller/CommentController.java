@@ -54,7 +54,7 @@ public class CommentController {
             @RequestParam boolean upvote,
             Authentication authentication) {
         User user = userService.getUserByEmail(authentication.getName());
-        return ResponseEntity.ok(commentService.voteComment(commentId, upvote, user));
+        return ResponseEntity.ok(commentService.voteComment(postId, commentId, upvote, user));
     }
 
     @DeleteMapping("/{commentId}")
@@ -63,7 +63,7 @@ public class CommentController {
             @PathVariable UUID commentId,
             Authentication authentication) {
         User user = userService.getUserByEmail(authentication.getName());
-        commentService.deleteComment(commentId, user);
+        commentService.deleteComment(postId, commentId, user);
         return ResponseEntity.noContent().build();
     }
 }

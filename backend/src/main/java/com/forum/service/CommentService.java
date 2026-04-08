@@ -84,6 +84,9 @@ public class CommentService {
         if (request.getParentCommentId() != null) {
             Comment parent = commentRepository.findById(request.getParentCommentId())
                     .orElseThrow(() -> new RuntimeException("Parent comment not found"));
+            if (!parent.getPost().getPostId().equals(postId)) {
+                throw new RuntimeException("Parent comment does not belong to this post");
+            }
             comment.setParentComment(parent);
         }
 
@@ -91,9 +94,10 @@ public class CommentService {
         return mapToResponse(comment, author);
     }
 
-    public void deleteComment(UUID commentId, User currentUser) {
+    public void deleteComment(UUID postId, UUID commentId, User currentUser) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
+        validateCommentBelongsToPost(postId, comment);
 
         if (!comment.getAuthor().getUserId().equals(currentUser.getUserId())
                 && !currentUser.getRole().name().equals("ADMIN")) {
@@ -104,9 +108,10 @@ public class CommentService {
     }
 
     @Transactional
-    public CommentResponse voteComment(UUID commentId, boolean isUpvote, User currentUser) {
+    public CommentResponse voteComment(UUID postId, UUID commentId, boolean isUpvote, User currentUser) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found"));
+        validateCommentBelongsToPost(postId, comment);
 
         int newVoteType = isUpvote ? 1 : -1;
 
@@ -169,5 +174,11 @@ public class CommentService {
         }
 
         return builder.build();
+    }
+
+    private void validateCommentBelongsToPost(UUID postId, Comment comment) {
+        if (!comment.getPost().getPostId().equals(postId)) {
+            throw new RuntimeException("Comment does not belong to this post");
+        }
     }
 }
