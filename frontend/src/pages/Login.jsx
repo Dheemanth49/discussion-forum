@@ -30,7 +30,7 @@ export default function Login() {
   return (
     <div className="font-body text-on-surface min-h-screen flex items-center justify-center p-0 md:p-6 lg:p-12 overflow-x-hidden fixed inset-0 z-[200] bg-surface" style={{ backgroundImage: 'radial-gradient(at 0% 0%, rgba(101, 218, 188, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(236, 178, 255, 0.15) 0px, transparent 50%), radial-gradient(at 50% 100%, rgba(30, 30, 50, 0.5) 0px, transparent 50%)' }}>
       <main className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-2 min-h-[100dvh] md:min-h-[85vh] md:rounded-3xl overflow-hidden shadow-[0_24px_48px_rgba(17,17,37,0.5)] bg-surface">
-        
+
         {/* Left Column: Decorative Panel */}
         <section className="hidden md:flex flex-col justify-between p-12 relative bg-surface-container-low overflow-hidden">
           <div className="relative z-10">
@@ -39,14 +39,14 @@ export default function Login() {
               <h1 className="font-headline text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-secondary to-primary">ForumHub</h1>
             </Link>
             <h2 className="font-headline text-5xl font-extrabold leading-tight mb-6">
-              Connect with the <br/>
+              Connect with the <br />
               <span className="text-primary">Global Archive.</span>
             </h2>
             <p className="text-on-surface-variant text-lg max-w-md leading-relaxed">
-              Join over 2 million members discussing the future of technology, philosophy, and digital art in our curated sanctuaries.
+              Join the members discussing the future of technology, philosophy, and digital art in our curated sanctuaries.
             </p>
           </div>
-          
+
 
 
           {/* Background Illustration Layer */}
@@ -60,7 +60,7 @@ export default function Login() {
 
         {/* Right Column: Login Card */}
         <section className="flex items-center justify-center p-8 md:p-16 lg:p-24 bg-surface relative">
-          
+
           {/* Mobile Logo Only */}
           <Link to="/" className="absolute top-8 left-8 md:hidden flex items-center gap-2">
             <span className="material-symbols-outlined text-2xl text-primary" data-icon="forum">forum</span>
@@ -80,7 +80,7 @@ export default function Login() {
             )}
 
             <form className="space-y-6" onSubmit={handleSubmit}>
-              
+
               {/* Email Field */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-on-surface-variant ml-1" htmlFor="email">Email Address</label>
@@ -88,8 +88,8 @@ export default function Login() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <span className="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">mail</span>
                   </div>
-                  <input 
-                    className="w-full bg-surface-container-lowest border-none rounded-2xl py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 transition-all outline-none" 
+                  <input
+                    className="w-full bg-surface-container-lowest border-none rounded-2xl py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 transition-all outline-none"
                     id="email" name="email" placeholder="name@example.com" type="email" required
                     value={email} onChange={e => setEmail(e.target.value)}
                   />
@@ -105,8 +105,8 @@ export default function Login() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <span className="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">lock</span>
                   </div>
-                  <input 
-                    className="w-full bg-surface-container-lowest border-none rounded-2xl py-4 pl-12 pr-12 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 transition-all outline-none" 
+                  <input
+                    className="w-full bg-surface-container-lowest border-none rounded-2xl py-4 pl-12 pr-12 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 transition-all outline-none"
                     id="password" name="password" placeholder="••••••••" type={showPassword ? 'text' : 'password'} required
                     value={password} onChange={e => setPassword(e.target.value)}
                   />
@@ -127,8 +127,8 @@ export default function Login() {
               </div>
 
               {/* Sign In Button */}
-              <button 
-                className="w-full bg-gradient-to-br from-secondary-container to-primary text-on-surface font-headline font-bold py-4 rounded-2xl shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100" 
+              <button
+                className="w-full bg-gradient-to-br from-secondary-container to-primary text-on-surface font-headline font-bold py-4 rounded-2xl shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100"
                 type="submit" disabled={loading}
               >
                 {loading ? 'Signing in...' : 'Sign In'}
@@ -139,7 +139,7 @@ export default function Login() {
 
             <footer className="mt-12 text-center">
               <p className="text-on-surface-variant">
-                Don't have an account? 
+                Don't have an account?
                 <Link className="text-secondary font-bold hover:underline transition-all ml-1" to="/register">Register</Link>
               </p>
             </footer>
