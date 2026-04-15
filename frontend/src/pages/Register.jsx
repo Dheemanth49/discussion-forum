@@ -83,7 +83,7 @@ export default function Register() {
                   </div>
                   <input 
                     className="w-full bg-surface-container-lowest border-none rounded-2xl py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-secondary/50 transition-all outline-none" 
-                    id="username" name="username" placeholder="alex_dev" type="text" required
+                    id="username" name="username" placeholder="please enter username" type="text" required
                     value={form.username} onChange={e => setForm({ ...form, username: e.target.value })}
                   />
                 </div>
@@ -98,7 +98,7 @@ export default function Register() {
                   </div>
                   <input 
                     className="w-full bg-surface-container-lowest border-none rounded-2xl py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-secondary/50 transition-all outline-none" 
-                    id="email" name="email" placeholder="name@example.com" type="email" required
+                    id="email" name="email" placeholder="please enter email address" type="email" required
                     value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
                   />
                 </div>

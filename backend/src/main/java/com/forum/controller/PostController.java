@@ -25,7 +25,8 @@ public class PostController {
     private final UserService userService;
 
     private User getCurrentUser(Authentication auth) {
-        if (auth == null || auth.getName() == null) return null;
+        if (auth == null || auth.getName() == null)
+            return null;
         try {
             return userService.getUserByEmail(auth.getName());
         } catch (Exception e) {
@@ -59,7 +60,8 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Authentication authentication) {
-        return ResponseEntity.ok(postService.getPostsByCategory(categoryId, page, size, getCurrentUser(authentication)));
+        return ResponseEntity
+                .ok(postService.getPostsByCategory(categoryId, page, size, getCurrentUser(authentication)));
     }
 
     @GetMapping("/user/{userId}")
@@ -146,5 +148,12 @@ public class PostController {
             Authentication authentication) {
         User user = userService.getUserByEmail(authentication.getName());
         return ResponseEntity.ok(postService.getSavedPosts(user, page, size));
+    }
+
+    @PostMapping("/sync-embeddings")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> syncEmbeddings() {
+        long count = postService.triggerReembedAllPosts();
+        return ResponseEntity.ok("Successfully triggered re-embedding for " + count + " posts.");
     }
 }

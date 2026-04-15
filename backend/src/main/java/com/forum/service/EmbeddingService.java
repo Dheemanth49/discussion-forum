@@ -59,6 +59,7 @@ public class EmbeddingService {
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 List<Double> embeddingList = (List<Double>) response.getBody().get("embedding");
                 if (embeddingList != null) {
+                    log.info("Successfully received embedding from Hugging Face for query");
                     return embeddingList.toString();
                 }
             }

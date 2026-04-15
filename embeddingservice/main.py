@@ -73,10 +73,12 @@ def embed_post(post_id):
         embedding = embed_text(combined_text)
 
         print("Updating embedding in database...")
+        # Format list to vector-compatible string '[v1,v2...]'
+        embedding_str = f"[{','.join(map(str, embedding))}]"
 
         cursor.execute(
-            "UPDATE posts SET embedding = %s WHERE post_id = %s",
-            (embedding, post_id)
+            "UPDATE posts SET embedding = %s::vector WHERE post_id = %s",
+            (embedding_str, post_id)
         )
 
         conn.commit()

@@ -6,6 +6,7 @@ import com.forum.dto.SummaryResponse;
 import com.forum.model.*;
 import com.forum.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PostService {
 
     private final PostRepository postRepository;
@@ -57,6 +59,7 @@ public class PostService {
         if (embeddingStr != null) {
             // 2. Get Semantic Search Results
             Page<Object[]> semanticResults = postRepository.searchPostsSemantic(embeddingStr, pageable);
+            log.info("Semantic search found {} potential matches", semanticResults.getContent().size());
             
             if (semanticResults.isEmpty()) {
                 return mapPageToResponse(textResultsPage, currentUser);
@@ -77,7 +80,7 @@ public class PostService {
             // Add semantic results first (usually more relevant)
             // But only if score is decent (e.g. > 0.6)
             for (UUID id : semanticPostIds) {
-                if (semanticScores.get(id) > 0.6) {
+                if (semanticScores.get(id) > 0.5) {
                     allPostIds.add(id);
                 }
             }

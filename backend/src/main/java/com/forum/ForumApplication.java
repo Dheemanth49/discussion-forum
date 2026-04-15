@@ -15,7 +15,7 @@ public class ForumApplication {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Kolkata"));
 
         Dotenv dotenv = Dotenv.configure()
-                .directory("../")
+                .directory("./")
                 .ignoreIfMissing()
                 .load();
 
