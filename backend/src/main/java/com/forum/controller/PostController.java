@@ -43,7 +43,7 @@ public class PostController {
         return ResponseEntity.ok(postService.getAllPosts(page, size, sort, getCurrentUser(authentication)));
     }
 
-    @GetMapping("/{postId}")
+    @GetMapping("/{postId:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<PostResponse> getPostById(@PathVariable UUID postId, Authentication authentication) {
         return ResponseEntity.ok(postService.getPostById(postId, getCurrentUser(authentication)));
     }
@@ -106,7 +106,7 @@ public class PostController {
         return ResponseEntity.ok(postService.createPost(request, user));
     }
 
-    @PutMapping("/{postId}")
+    @PutMapping("/{postId:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<PostResponse> updatePost(
             @PathVariable UUID postId,
             @Valid @RequestBody PostRequest request,
@@ -115,7 +115,7 @@ public class PostController {
         return ResponseEntity.ok(postService.updatePost(postId, request, user));
     }
 
-    @DeleteMapping("/{postId}")
+    @DeleteMapping("/{postId:[0-9a-fA-F\\-]{36}}")
     public ResponseEntity<Void> deletePost(
             @PathVariable UUID postId,
             Authentication authentication) {
@@ -124,7 +124,7 @@ public class PostController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{postId}/vote")
+    @PostMapping("/{postId:[0-9a-fA-F\\-]{36}}/vote")
     public ResponseEntity<PostResponse> votePost(
             @PathVariable UUID postId,
             @RequestParam boolean upvote,
@@ -133,7 +133,7 @@ public class PostController {
         return ResponseEntity.ok(postService.votePost(postId, upvote, user));
     }
 
-    @PostMapping("/{postId}/save")
+    @PostMapping("/{postId:[0-9a-fA-F\\-]{36}}/save")
     public ResponseEntity<PostResponse> toggleSavePost(
             @PathVariable UUID postId,
             Authentication authentication) {
@@ -154,6 +154,7 @@ public class PostController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> syncEmbeddings() {
         long count = postService.triggerReembedAllPosts();
+
         return ResponseEntity.ok("Successfully triggered re-embedding for " + count + " posts.");
     }
 }

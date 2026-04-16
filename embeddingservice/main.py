@@ -5,7 +5,8 @@ from db import get_connection
 import numpy as np
 import logging
 import os
-
+import time
+import torch
 
 app = Flask(__name__)
 
@@ -13,8 +14,6 @@ logging.basicConfig(level=logging.INFO)
 HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", os.getenv("FLASK_PORT", "7860")))
 DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
-
-import torch
 
 # Limit PyTorch threads to reduce memory and CPU overhead
 torch.set_num_threads(1)
@@ -41,62 +40,68 @@ def embed_post(post_id):
     print("--------------------------------------------------")
     print(f"Embedding task started for post_id: {post_id}")
 
-    conn = None
-    cursor = None
+    max_retries = 5
+    retry_delay = 3  # seconds
 
-    try:
-        print("Connecting to database...")
-        conn = get_connection()
-        cursor = conn.cursor()
-        print("Database connected")
+    for attempt in range(max_retries):
+        conn = None
+        cursor = None
+        try:
+            print(f"Attempt {attempt + 1}: Connecting to database...")
+            conn = get_connection()
+            cursor = conn.cursor()
+            print("Database connected")
 
-        print("Fetching post content...")
-        cursor.execute(
-            "SELECT title, content FROM posts WHERE post_id = %s",
-            (post_id,)
-        )
+            print(f"Fetching post content for {post_id}...")
+            cursor.execute(
+                "SELECT title, content FROM posts WHERE post_id = %s",
+                (post_id,)
+            )
 
-        result = cursor.fetchone()
+            result = cursor.fetchone()
 
-        if not result:
-            print(f"Post {post_id} not found in database")
-            return
+            if not result:
+                print(f"Post {post_id} not found (yet). Retrying in {retry_delay}s...")
+                if cursor: cursor.close()
+                if conn: conn.close()
+                time.sleep(retry_delay)
+                continue
 
-        print("Post found")
+            print("Post found")
+            title, content = result
+            combined_text = f"{title} {content}"
 
-        title, content = result
-        combined_text = f"{title} {content}"
+            print(f"Generating embedding for text (length: {len(combined_text)})...")
+            embedding = embed_text(combined_text)
 
-        print("Combined text:")
-        print(combined_text)
+            print("Updating embedding in database...")
+            embedding_str = f"[{','.join(map(str, embedding))}]"
+            
+            cursor.execute(
+                "UPDATE posts SET embedding = %s::vector, updated_at = NOW() WHERE post_id = %s",
+                (embedding_str, post_id)
+            )
 
-        embedding = embed_text(combined_text)
+            conn.commit()
+            print(f"Embedding stored successfully for post {post_id}")
+            return  # Success!
 
-        print("Updating embedding in database...")
-        # Format list to vector-compatible string '[v1,v2...]'
-        embedding_str = f"[{','.join(map(str, embedding))}]"
+        except Exception as e:
+            print(f"ERROR OCCURRED on attempt {attempt + 1}:")
+            print(e)
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+            else:
+                print("Max retries reached. Embedding failed.")
 
-        cursor.execute(
-            "UPDATE posts SET embedding = %s::vector WHERE post_id = %s",
-            (embedding_str, post_id)
-        )
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+            print(f"Attempt {attempt + 1} finished")
 
-        conn.commit()
-
-        print(f"Embedding stored successfully for post {post_id}")
-
-    except Exception as e:
-        print("ERROR OCCURRED:")
-        print(e)
-
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
-        print("DB connection closed")
-        print("--------------------------------------------------")
+    print("--------------------------------------------------")
 
 
 @app.route("/")
@@ -144,6 +149,7 @@ def generate_query_embedding():
         return jsonify({
             "error": "query cannot be empty"
         }), 400
+
 
     embedding = embed_text(query)
 
