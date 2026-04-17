@@ -48,7 +48,7 @@ public class PostController {
         return ResponseEntity.ok(postService.getPostById(postId, getCurrentUser(authentication)));
     }
 
-    @GetMapping("/{postId}/summary")
+    @GetMapping("/{postId:[0-9a-fA-F\\-]{36}}/summary")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SummaryResponse> getPostSummary(@PathVariable UUID postId) {
         return ResponseEntity.ok(postService.getPostSummary(postId));

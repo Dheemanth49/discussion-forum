@@ -18,13 +18,32 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now().toString());
+        
         String msg = ex.getMessage();
-        if (msg != null && (msg.toLowerCase().contains("sql") || msg.contains("ConstraintViolation") || msg.contains("org.hibernate"))) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        // Handle specific common runtime exceptions
+        if (ex instanceof org.springframework.security.access.AccessDeniedException) {
+            status = HttpStatus.FORBIDDEN;
+            msg = "Access denied: You do not have permission for this action.";
+        } else if (msg != null && msg.toLowerCase().contains("not found")) {
+            status = HttpStatus.NOT_FOUND;
+        } else if (msg != null && (msg.toLowerCase().contains("sql") || msg.contains("ConstraintViolation") || msg.contains("org.hibernate"))) {
             msg = "A database error occurred.";
-        } else if (msg != null && msg.length() > 200) {
+        } else if (msg != null && msg.length() > 500) {
             msg = "An internal server error occurred.";
         }
+
         error.put("message", msg);
+        error.put("status", status.value());
+        return ResponseEntity.status(status).body(error);
+    }
+
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("timestamp", LocalDateTime.now().toString());
+        error.put("message", "Invalid parameter value: " + ex.getValue());
         error.put("status", HttpStatus.BAD_REQUEST.value());
         return ResponseEntity.badRequest().body(error);
     }
@@ -47,7 +66,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now().toString());
-        error.put("message", "An unexpected error occurred");
+        error.put("message", "An unexpected error occurred: " + ex.getMessage());
         error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
